@@ -31,5 +31,5 @@ npx cdk destroy     # Tear down (careful!)
 
 ## Environments
 
-- **dev** — Single NAT, single-AZ RDS, no replicas
-- **prod** — Dual NAT, Multi-AZ RDS, read replica, ElastiCache replica, provisioned Lambda concurrency
+- **dev** · Single NAT, single-AZ RDS, no replicas
+- **prod** · Dual NAT, Multi-AZ RDS, read replica, ElastiCache replica, provisioned Lambda concurrency

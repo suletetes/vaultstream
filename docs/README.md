@@ -34,4 +34,4 @@ Outputs PNG (with embedded icons) and SVG (with base64-inlined icons) for each d
 
 ## SVG Notes
 
-SVG files have icons embedded as base64 data URIs — they're fully self-contained and portable. No external file references.
+SVG files have icons embedded as base64 data URIs. They're fully self-contained and portable. No external file references.
