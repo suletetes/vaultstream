@@ -1,0 +1,50 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "project": ["./tsconfig.base.json", "./packages/*/tsconfig.json", "./infra/tsconfig.json"]
+  },
+  "plugins": ["@typescript-eslint", "import"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:import/typescript",
+    "prettier"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error",
+    "import/order": [
+      "error",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc" }
+      }
+    ],
+    "import/no-duplicates": "error",
+    "no-console": "warn",
+    "no-debugger": "error"
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "cdk.out",
+    "coverage",
+    "*.js",
+    "*.d.ts"
+  ],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "project": ["./tsconfig.base.json", "./packages/*/tsconfig.json", "./infra/tsconfig.json"]
+      }
+    }
+  }
+}

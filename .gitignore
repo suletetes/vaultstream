@@ -1,0 +1,80 @@
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build Outputs ────────────────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ─── CDK ──────────────────────────────────────────────────────────────────────
+cdk.out/
+cdk.context.json
+
+# ─── Test Coverage ────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── Environment Variables ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# ─── Secrets & Keys ──────────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account.json
+
+# ─── IDE / Editor ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ─── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── LocalStack / Local Dev Data ─────────────────────────────────────────────
+.localstack/
+volume/
+tmp/
+
+# ─── Cypress ──────────────────────────────────────────────────────────────────
+packages/frontend/cypress/videos/
+packages/frontend/cypress/screenshots/
+packages/frontend/cypress/downloads/
+
+# ─── Lock Files (keep package-lock.json) ──────────────────────────────────────
+yarn.lock
+pnpm-lock.yaml
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.tgz
+.cache/
+.parcel-cache/
+.turbo/
