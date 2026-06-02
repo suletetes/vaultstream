@@ -1,0 +1,76 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build Packages
+        run: npm run build --workspaces --if-present
+
+      - name: CDK Diff
+        working-directory: infra
+        run: npx cdk diff --all
+
+      - name: CDK Deploy
+        working-directory: infra
+        run: npx cdk deploy --all --require-approval never
+
+      - name: Build Frontend
+        working-directory: packages/frontend
+        run: npm run build
+
+      - name: Sync Frontend to S3
+        run: |
+          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}/ --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Smoke Tests
+        run: |
+          HEALTH_URL="${{ secrets.API_URL }}/health"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test failed: health check returned $STATUS"
+            exit 1
+          fi
+          echo "Smoke test passed: health check returned 200"
+
+      - name: Rollback on Failure
+        if: failure()
+        working-directory: infra
+        run: |
+          echo "Deployment failed — initiating rollback"
+          # CDK doesn't have native rollback; would need to redeploy previous commit
+          # For now, alert the team
+          echo "::error::Deployment to dev failed. Manual intervention may be required."

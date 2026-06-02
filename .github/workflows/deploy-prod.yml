@@ -1,0 +1,84 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Pre-Deploy Backup — RDS Snapshot
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          aws rds create-db-snapshot \
+            --db-instance-identifier vaultstream-audit \
+            --db-snapshot-identifier "pre-deploy-${TIMESTAMP}"
+          echo "RDS snapshot created: pre-deploy-${TIMESTAMP}"
+
+      - name: Pre-Deploy Backup — DynamoDB
+        run: |
+          aws dynamodb create-backup \
+            --table-name vaultstream-metadata \
+            --backup-name "pre-deploy-$(date +%Y%m%d-%H%M%S)"
+          echo "DynamoDB backup created"
+
+      - name: Build Packages
+        run: npm run build --workspaces --if-present
+
+      - name: CDK Diff (Review)
+        working-directory: infra
+        run: npx cdk diff --all
+
+      - name: CDK Deploy
+        working-directory: infra
+        run: npx cdk deploy --all --require-approval never
+
+      - name: Build Frontend
+        working-directory: packages/frontend
+        run: npm run build
+
+      - name: Sync Frontend to S3
+        run: |
+          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}/ --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Post-Deploy Verification
+        run: |
+          HEALTH_URL="${{ secrets.API_URL }}/health"
+          echo "Waiting 30s for deployment to stabilize..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Post-deploy verification failed: $STATUS"
+            exit 1
+          fi
+          echo "Production deployment verified successfully"
