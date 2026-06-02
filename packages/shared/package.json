@@ -1,0 +1,19 @@
+{
+  "name": "@vaultstream/shared",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared types, schemas, constants, and utilities for VaultStream",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ulid": "^2.3.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

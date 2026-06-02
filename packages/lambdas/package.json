@@ -1,0 +1,26 @@
+{
+  "name": "@vaultstream/lambdas",
+  "version": "0.0.1",
+  "private": true,
+  "description": "VaultStream Lambda function handlers",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@vaultstream/shared": "*",
+    "@aws-sdk/client-s3": "^3.500.0",
+    "@aws-sdk/client-dynamodb": "^3.500.0",
+    "@aws-sdk/client-sns": "^3.500.0",
+    "@aws-sdk/lib-dynamodb": "^3.500.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.131",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
