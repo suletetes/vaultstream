@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs,sns,dynamodb,kms,events
+      - DEFAULT_REGION=us-east-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./scripts/init-localstack.sh:/etc/localstack/init/ready.d/init.sh"
+      - localstack_data:/var/lib/localstack
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: vaultstream
+      POSTGRES_USER: vaultstream
+      POSTGRES_PASSWORD: localdev123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - "./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaultstream"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass localdev123
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "localdev123", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  localstack_data:
+  postgres_data:
