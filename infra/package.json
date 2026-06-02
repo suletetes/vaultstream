@@ -1,0 +1,25 @@
+{
+  "name": "@vaultstream/infra",
+  "version": "0.0.1",
+  "private": true,
+  "description": "VaultStream AWS CDK infrastructure stacks",
+  "main": "./dist/bin/app.js",
+  "types": "./dist/bin/app.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy",
+    "clean": "rm -rf dist cdk.out"
+  },
+  "dependencies": {
+    "@vaultstream/shared": "*",
+    "aws-cdk-lib": "^2.130.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.130.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
