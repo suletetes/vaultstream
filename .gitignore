@@ -78,3 +78,9 @@ pnpm-lock.yaml
 .cache/
 .parcel-cache/
 .turbo/
+.kiro/specs/vaultstream-platform/.config.kiro
+.kiro/specs/vaultstream-platform/design.md
+.kiro/specs/vaultstream-platform/requirements.md
+.kiro/specs/vaultstream-platform/tasks.md
+docs/generate_architecture.py
+vaultstream-spec.md

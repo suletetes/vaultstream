@@ -1,7 +1,5 @@
 # VaultStream Architecture Diagrams
 
-Auto-generated architecture diagrams using the Python [`diagrams`](https://github.com/mingrammer/diagrams) library.
-
 ## Diagrams
 
 ### System Architecture
@@ -19,19 +17,3 @@ Event-driven processing: S3 upload → EventBridge → SQS → Thumbnail/Virus S
 
 ![Security Architecture](vaultstream-security.png)
 
-## Regenerating
-
-```bash
-# Prerequisites
-pip install diagrams
-# Windows: winget install Graphviz.Graphviz (ensure C:\Program Files\Graphviz\bin is on PATH)
-
-# Generate
-python docs/generate_architecture.py
-```
-
-Outputs PNG (with embedded icons) and SVG (with base64-inlined icons) for each diagram.
-
-## SVG Notes
-
-SVG files have icons embedded as base64 data URIs. They're fully self-contained and portable. No external file references.
