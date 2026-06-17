@@ -12,6 +12,7 @@
 
 import { Router } from 'express';
 import { cognitoAuth } from '../middleware/auth';
+import { authorizeFileAccess } from '../middleware/authorize';
 import { addComment, listComments, editComment, deleteComment } from '../controllers/comment-controller';
 
 const router = Router();
@@ -19,6 +20,6 @@ const router = Router();
 router.post('/api/files/:id/comments', cognitoAuth(), addComment);
 router.get('/api/files/:id/comments', cognitoAuth(), listComments);
 router.put('/api/files/:id/comments/:cid', cognitoAuth(), editComment);
-router.delete('/api/files/:id/comments/:cid', cognitoAuth(), deleteComment);
+router.delete('/api/files/:id/comments/:cid', cognitoAuth(), authorizeFileAccess('view'), deleteComment);
 
 export { router as commentRoutes };

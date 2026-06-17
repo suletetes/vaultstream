@@ -76,8 +76,11 @@ export async function deleteComment(req: Request, res: Response, next: NextFunct
     const fileId = req.params.id;
     const commentId = req.params.cid;
 
-    // File owner check is handled inside the service layer
-    await commentService.deleteComment(fileId, commentId, userId);
+    // If authorizeFileAccess middleware ran, fileMetadata is set
+    // Otherwise (e.g., route without authorize), assume not file owner
+    const isFileOwner = req.fileMetadata?.PK === `USER#${userId}`;
+
+    await commentService.deleteComment(fileId, commentId, userId, isFileOwner);
     res.status(204).send();
   } catch (error) {
     next(error);
