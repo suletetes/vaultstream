@@ -53,9 +53,7 @@ export class DatabaseStack extends cdk.Stack {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      pointInTimeRecoverySpecification: {
-        pointInTimeRecoveryEnabled: config.pitrEnabled,
-      },
+      pointInTimeRecovery: config.pitrEnabled,
       timeToLiveAttribute: 'expiresAt',
       removalPolicy: config.deletionProtection
         ? cdk.RemovalPolicy.RETAIN
@@ -209,7 +207,7 @@ export class DatabaseStack extends cdk.Stack {
       securityGroupIds: [redisSecurityGroup.securityGroupId],
       transitEncryptionEnabled: true,
       atRestEncryptionEnabled: true,
-      authToken: redisAuthToken.secretValue.unsafeUnwrap(),
+      authToken: cdk.Token.asString(redisAuthToken.secretValue),
       port: 6379,
       snapshotRetentionLimit: 1,
       snapshotWindow: '05:00-06:00',

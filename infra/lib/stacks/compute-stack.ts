@@ -297,7 +297,13 @@ export class ComputeStack extends cdk.Stack {
       proxy: true,
     });
 
-    // Root proxy resource — routes all requests to Express
+    // Health check endpoint — no authorization required (used by ALB, smoke tests)
+    const healthResource = this.restApi.root.addResource('health');
+    healthResource.addMethod('GET', apiIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+
+    // Root proxy resource — routes all other requests to Express (Cognito-protected)
     this.restApi.root.addProxy({
       defaultIntegration: apiIntegration,
       defaultMethodOptions: {

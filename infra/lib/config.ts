@@ -162,7 +162,7 @@ export const prodConfig: EnvironmentConfig = {
     rdsInstanceClass: 'db.t3.medium',
     rdsMultiAz: true,
     rdsReadReplicas: 1,
-    rdsBackupRetentionDays: 7,
+    rdsBackupRetentionDays: 30,
     redisNodeType: 'cache.t3.micro',
     redisReplicas: 1,
   },
