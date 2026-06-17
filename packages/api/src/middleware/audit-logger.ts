@@ -139,7 +139,7 @@ export function auditLogger() {
       }
 
       // Skip if no userId (unauthenticated requests)
-      const userId = (req as Record<string, unknown>).userId as string | undefined;
+      const userId = req.user?.userId;
       if (!userId) {
         return;
       }

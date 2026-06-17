@@ -94,6 +94,7 @@ export function cognitoAuth() {
         userId,
         email,
         role: role as 'user' | 'admin',
+        tier: ((payload as Record<string, unknown>)['custom:tier'] as string as 'free' | 'pro' | 'enterprise') || 'free',
       };
 
       next();

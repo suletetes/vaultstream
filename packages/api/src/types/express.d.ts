@@ -1,6 +1,6 @@
 /**
  * Express type augmentation for VaultStream.
- * Adds requestId, user, file, and share to the Express Request interface.
+ * Adds requestId, user, fileMetadata, and share to the Express Request interface.
  */
 
 import { FileEntity, ShareEntity } from '@vaultstream/shared';
@@ -12,11 +12,15 @@ interface RequestUser {
   tier: 'free' | 'pro' | 'enterprise';
 }
 
-declare namespace Express {
-  interface Request {
-    requestId: string;
-    user?: RequestUser;
-    file?: FileEntity;
-    share?: ShareEntity;
+declare global {
+  namespace Express {
+    interface Request {
+      requestId: string;
+      user?: RequestUser;
+      fileMetadata?: FileEntity;
+      share?: ShareEntity;
+    }
   }
 }
+
+export {};
