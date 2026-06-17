@@ -13,10 +13,12 @@ import pino from 'pino';
 
 import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { sharePK, shareSK, gsi3Keys } from '../db/key-builders';
-import { queryItems, putItem, deleteItem, updateItem } from '../db/base-repository';
+import { queryItems, putItem, deleteItem, updateItem, getItem } from '../db/base-repository';
 import {
   validationError,
   MAX_SHARES_PER_FILE,
+  AppError,
+  ErrorCode,
 } from '@vaultstream/shared';
 import type { ShareEntity, Permission, PaginationParams } from '@vaultstream/shared';
 import type { CacheService } from '../cache/cache-service';
@@ -68,6 +70,7 @@ export interface GetSharedWithMeParams {
 
 export interface ListSharesForFileParams {
   fileId: string;
+  ownerId: string;
 }
 
 export interface PaginatedShareResult {
@@ -293,9 +296,23 @@ export class ShareService {
 
   /**
    * List all shares for a specific file.
+   * Verifies the requesting user is the file owner before returning shares.
    */
   async listSharesForFile(params: ListSharesForFileParams): Promise<ShareEntity[]> {
-    const { fileId } = params;
+    const { fileId, ownerId } = params;
+
+    // Verify ownership before returning shares
+    const file = await getItem<{ PK: string }>(
+      `USER#${ownerId}` as `USER#${string}`,
+      `FILE#${fileId}` as `FILE#${string}`,
+    );
+
+    if (!file) {
+      throw new AppError({
+        code: ErrorCode.FORBIDDEN,
+        message: 'Access denied',
+      });
+    }
 
     const result = await queryItems<ShareEntity>({
       keyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',

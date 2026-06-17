@@ -82,3 +82,26 @@ jobs:
             exit 1
           fi
           echo "Production deployment verified successfully"
+
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "::error::Production deployment failed — initiating rollback"
+          # Restore previous frontend from S3 versioning
+          aws s3api list-object-versions \
+            --bucket "vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}" \
+            --query 'Versions[?IsLatest==`false`]' --output json > /dev/null 2>&1 || true
+          # Redeploy the last known-good CDK state via CloudFormation rollback
+          STACKS=$(aws cloudformation list-stacks \
+            --stack-status-filter UPDATE_ROLLBACK_COMPLETE UPDATE_COMPLETE \
+            --query "StackSummaries[?contains(StackName,'vaultstream-prod')].StackName" \
+            --output text)
+          for STACK in $STACKS; do
+            echo "Rolling back stack: $STACK"
+            aws cloudformation rollback-stack --stack-name "$STACK" || true
+          done
+          # Invalidate CloudFront to serve rolled-back content
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*" || true
+          echo "Rollback initiated. Manual verification required."

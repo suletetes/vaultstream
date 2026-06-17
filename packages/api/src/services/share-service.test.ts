@@ -35,16 +35,18 @@ vi.mock('../db/base-repository', () => ({
   putItem: vi.fn().mockResolvedValue(undefined),
   deleteItem: vi.fn().mockResolvedValue(undefined),
   updateItem: vi.fn().mockResolvedValue(undefined),
+  getItem: vi.fn().mockResolvedValue({ PK: 'USER#owner-123', SK: 'FILE#file-abc' }),
 }));
 
 import { docClient } from '../db/dynamodb';
-import { queryItems, putItem, deleteItem, updateItem } from '../db/base-repository';
+import { queryItems, putItem, deleteItem, updateItem, getItem } from '../db/base-repository';
 
 const mockDocClientSend = vi.mocked(docClient.send);
 const mockQueryItems = vi.mocked(queryItems);
 const mockPutItem = vi.mocked(putItem);
 const mockDeleteItem = vi.mocked(deleteItem);
 const mockUpdateItem = vi.mocked(updateItem);
+const mockGetItem = vi.mocked(getItem);
 
 // Mock EventBridge client
 const mockEventBridgeSend = vi.fn().mockResolvedValue({});
@@ -676,7 +678,7 @@ describe('ShareService', () => {
         lastEvaluatedKey: undefined,
       });
 
-      const result = await service.listSharesForFile({ fileId: 'file-abc' });
+      const result = await service.listSharesForFile({ fileId: 'file-abc', ownerId: 'owner-123' });
 
       expect(result).toHaveLength(2);
       expect(result[0].sharedWith).toBe('user-1');
@@ -686,7 +688,7 @@ describe('ShareService', () => {
     it('should query with correct key condition expression', async () => {
       mockQueryItems.mockResolvedValueOnce({ items: [], lastEvaluatedKey: undefined });
 
-      await service.listSharesForFile({ fileId: 'file-abc' });
+      await service.listSharesForFile({ fileId: 'file-abc', ownerId: 'owner-123' });
 
       expect(mockQueryItems).toHaveBeenCalledWith({
         keyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
@@ -700,7 +702,7 @@ describe('ShareService', () => {
     it('should return empty array when no shares exist', async () => {
       mockQueryItems.mockResolvedValueOnce({ items: [], lastEvaluatedKey: undefined });
 
-      const result = await service.listSharesForFile({ fileId: 'file-abc' });
+      const result = await service.listSharesForFile({ fileId: 'file-abc', ownerId: 'owner-123' });
 
       expect(result).toHaveLength(0);
     });
