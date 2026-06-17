@@ -202,7 +202,7 @@ describe('ShareController', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual(mockShares);
-      expect(mockShareService.listSharesForFile).toHaveBeenCalledWith({ fileId: 'file-abc' });
+      expect(mockShareService.listSharesForFile).toHaveBeenCalledWith({ fileId: 'file-abc', ownerId: 'user-123' });
     });
 
     it('should return 200 with empty array when no shares exist', async () => {

@@ -76,10 +76,8 @@ export async function deleteComment(req: Request, res: Response, next: NextFunct
     const fileId = req.params.id;
     const commentId = req.params.cid;
 
-    // Check if user is file owner (simplified — in production, check DynamoDB)
-    const isFileOwner = req.file?.PK === `USER#${userId}`;
-
-    await commentService.deleteComment(fileId, commentId, userId, isFileOwner);
+    // File owner check is handled inside the service layer
+    await commentService.deleteComment(fileId, commentId, userId);
     res.status(204).send();
   } catch (error) {
     next(error);

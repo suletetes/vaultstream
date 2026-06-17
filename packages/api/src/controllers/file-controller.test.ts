@@ -86,7 +86,7 @@ function createTestApp() {
 
   // GET /api/files/:id/download-url — with mock authorize middleware
   const mockAuthorize = (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
-    _req.file = {
+    _req.fileMetadata = {
       PK: 'USER#user-123' as `USER#${string}`,
       SK: 'FILE#file-abc' as `FILE#${string}`,
       entityType: 'FILE' as const,
@@ -371,7 +371,7 @@ describe('FileController', () => {
       };
 
       const mockAuthorize = (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
-        _req.file = {
+        _req.fileMetadata = {
           PK: 'USER#user-123' as `USER#${string}`,
           SK: 'FILE#file-abc' as `FILE#${string}`,
           entityType: 'FILE' as const,

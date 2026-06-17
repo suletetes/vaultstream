@@ -46,13 +46,15 @@ export async function createShare(req: Request, res: Response, next: NextFunctio
  * GET /api/files/:id/shares
  *
  * Lists all shares for a specific file.
+ * Requires the requesting user to be the file owner.
  * Returns 200 with an array of share entities.
  */
 export async function listShares(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const userId = req.user!.userId;
     const fileId = req.params.id;
 
-    const shares = await shareService.listSharesForFile({ fileId });
+    const shares = await shareService.listSharesForFile({ fileId, ownerId: userId });
 
     res.status(200).json(shares);
   } catch (error) {

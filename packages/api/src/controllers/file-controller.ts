@@ -70,13 +70,13 @@ export async function confirmUpload(req: Request, res: Response, next: NextFunct
  * GET /api/files/:id/download-url
  *
  * Uses authorizeFileAccess('download') middleware to verify access.
- * The middleware attaches req.file with the file metadata.
+ * The middleware attaches req.fileMetadata with the file metadata.
  * Calls fileService.generateDownloadUrl and returns the download URL.
  */
 export async function generateDownloadUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const userId = req.user!.userId;
-    const fileMetadata = req.file!;
+    const fileMetadata = req.fileMetadata!;
     const isOwner = fileMetadata.PK === `USER#${userId}`;
 
     const result = await fileService.generateDownloadUrl({
