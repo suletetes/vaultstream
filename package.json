@@ -11,7 +11,7 @@
     "infra"
   ],
   "scripts": {
-    "dev": "docker compose up -d && npm run dev:api & npm run dev:frontend",
+    "dev": "docker compose up -d && concurrently \"npm:dev:api\" \"npm:dev:frontend\"",
     "dev:api": "npm run dev --workspace=packages/api",
     "dev:frontend": "npm run dev --workspace=packages/frontend",
     "dev:infra": "docker compose up -d",
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^8.2.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.0",

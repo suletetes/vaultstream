@@ -9,7 +9,7 @@ interface RequestUser {
   userId: string;
   email: string;
   role: 'user' | 'admin';
-  tier: 'free' | 'pro' | 'enterprise';
+  tier?: 'free' | 'pro' | 'enterprise';
 }
 
 declare global {

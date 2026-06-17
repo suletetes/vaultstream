@@ -132,6 +132,7 @@ describe('cognitoAuth middleware', () => {
       userId: 'user-123',
       email: 'test@example.com',
       role: 'user',
+      tier: 'free',
     });
   });
 
@@ -153,6 +154,7 @@ describe('cognitoAuth middleware', () => {
       userId: 'user-456',
       email: 'admin@example.com',
       role: 'user',
+      tier: 'free',
     });
   });
 
@@ -175,6 +177,7 @@ describe('cognitoAuth middleware', () => {
       userId: 'admin-789',
       email: 'admin@vaultstream.dev',
       role: 'admin',
+      tier: 'free',
     });
   });
 
@@ -236,6 +239,7 @@ describe('cognitoAuth middleware', () => {
       userId: 'user-no-email',
       email: '',
       role: 'user',
+      tier: 'free',
     });
   });
 });
