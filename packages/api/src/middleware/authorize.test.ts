@@ -159,7 +159,7 @@ describe('authorizeFileAccess', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledWith(); // called with no args = success
-    expect(req.file).toEqual(file);
+    expect(req.fileMetadata).toEqual(file);
     expect(req.share).toBeUndefined();
   });
 
@@ -175,7 +175,7 @@ describe('authorizeFileAccess', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.file).toEqual(file);
+    expect(req.fileMetadata).toEqual(file);
   });
 
   it('should return FORBIDDEN when no ownership or share exists', async () => {
@@ -211,7 +211,7 @@ describe('authorizeFileAccess', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.file).toEqual(ownerFile);
+    expect(req.fileMetadata).toEqual(ownerFile);
     expect(req.share).toEqual(share);
   });
 
@@ -268,7 +268,7 @@ describe('authorizeFileAccess', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.file).toEqual(ownerFile);
+    expect(req.fileMetadata).toEqual(ownerFile);
     expect(req.share).toEqual(share);
   });
 
@@ -289,7 +289,7 @@ describe('authorizeFileAccess', () => {
     await middleware(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.file).toEqual(ownerFile);
+    expect(req.fileMetadata).toEqual(ownerFile);
     expect(req.share).toEqual(share);
   });
 

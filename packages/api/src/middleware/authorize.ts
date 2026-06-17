@@ -34,7 +34,7 @@ export function hasPermission(userPerm: Permission, required: Permission): boole
  * Flow:
  * 1. Extract userId from req.user and fileId from req.params.id
  * 2. Check ownership: getItem(userPK(userId), fileSK(fileId))
- * 3. If owner → attach file to req.file, call next()
+ * 3. If owner → attach file to req.fileMetadata, call next()
  * 4. If not owner → check share: getItem(sharePK(fileId), shareSK(userId))
  * 5. Verify permission hierarchy and expiration
  * 6. If sufficient permission → attach file and share to req, call next()
@@ -65,7 +65,7 @@ export function authorizeFileAccess(requiredPermission: Permission) {
 
       if (file) {
         // Owner has full access
-        req.file = file;
+        req.fileMetadata = file;
         next();
         return;
       }
@@ -110,7 +110,7 @@ export function authorizeFileAccess(requiredPermission: Permission) {
         });
       }
 
-      req.file = ownerFile;
+      req.fileMetadata = ownerFile;
       req.share = share;
       next();
     } catch (error) {
