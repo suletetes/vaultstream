@@ -124,11 +124,14 @@ computeStack.addDependency(messagingStack);
 //    Note: Uses bucket names (not constructs) to avoid circular dependency
 //    between StorageStack and CdnStack OAC policies.
 // ---------------------------------------------------------------------------
+// Account ID for bucket name construction (same pattern as StorageStack)
+const accountId = config.account || process.env.CDK_DEFAULT_ACCOUNT || '000000000000';
+
 const cdnStack = new CdnStack(app, `${config.prefix}-cdn`, {
   ...stackProps,
   config,
-  frontendBucketName: storageStack.frontendBucket.bucketName,
-  thumbnailsBucketName: storageStack.thumbnailsBucket.bucketName,
+  frontendBucketName: `${config.prefix}-frontend-${accountId}`,
+  thumbnailsBucketName: `${config.prefix}-thumbnails-${accountId}`,
   webAclArn: securityStack.webAcl?.attrArn,
 });
 
@@ -146,5 +149,6 @@ const monitoringStack = new MonitoringStack(app, `${config.prefix}-monitoring`, 
 });
 monitoringStack.addDependency(computeStack);
 monitoringStack.addDependency(databaseStack);
+monitoringStack.addDependency(cdnStack);
 
 app.synth();

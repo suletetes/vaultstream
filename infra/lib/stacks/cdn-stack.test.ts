@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CdnStack } from './cdn-stack';
@@ -13,24 +12,10 @@ describe('CdnStack', () => {
   beforeEach(() => {
     app = new cdk.App();
 
-    // Create buckets in the same stack to avoid cross-stack dependency cycles.
-    // In production, these would come from the StorageStack.
     const cdnStack = new CdnStack(app, 'TestCdnStack', {
       config: devConfig,
-      frontendBucket: s3.Bucket.fromBucketArn(
-        new cdk.Stack(app, 'ImportStack', {
-          env: { account: '123456789012', region: 'us-east-1' },
-        }),
-        'FrontendBucket',
-        'arn:aws:s3:::vaultstream-dev-frontend-123456789012',
-      ),
-      thumbnailsBucket: s3.Bucket.fromBucketArn(
-        new cdk.Stack(app, 'ImportStack2', {
-          env: { account: '123456789012', region: 'us-east-1' },
-        }),
-        'ThumbnailsBucket',
-        'arn:aws:s3:::vaultstream-dev-thumbnails-123456789012',
-      ),
+      frontendBucketName: 'vaultstream-dev-frontend-123456789012',
+      thumbnailsBucketName: 'vaultstream-dev-thumbnails-123456789012',
       env: { account: '123456789012', region: 'us-east-1' },
     });
 
@@ -270,20 +255,8 @@ describe('CdnStack', () => {
       const wafApp = new cdk.App();
       const wafStack = new CdnStack(wafApp, 'TestCdnStackWithWaf', {
         config: devConfig,
-        frontendBucket: s3.Bucket.fromBucketArn(
-          new cdk.Stack(wafApp, 'WafImportStack', {
-            env: { account: '123456789012', region: 'us-east-1' },
-          }),
-          'FrontendBucket',
-          'arn:aws:s3:::vaultstream-dev-frontend-123456789012',
-        ),
-        thumbnailsBucket: s3.Bucket.fromBucketArn(
-          new cdk.Stack(wafApp, 'WafImportStack2', {
-            env: { account: '123456789012', region: 'us-east-1' },
-          }),
-          'ThumbnailsBucket',
-          'arn:aws:s3:::vaultstream-dev-thumbnails-123456789012',
-        ),
+        frontendBucketName: 'vaultstream-dev-frontend-123456789012',
+        thumbnailsBucketName: 'vaultstream-dev-thumbnails-123456789012',
         webAclArn: 'arn:aws:wafv2:us-east-1:123456789012:global/webacl/test-acl/abc123',
         env: { account: '123456789012', region: 'us-east-1' },
       });
