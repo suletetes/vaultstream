@@ -123,17 +123,21 @@ computeStack.addDependency(messagingStack);
 // 7. CDN Stack — CloudFront distributions for frontend and thumbnails
 //    Note: Uses bucket names (not constructs) to avoid circular dependency
 //    between StorageStack and CdnStack OAC policies.
+//    Skipped when cdnEnabled=false (new accounts need CloudFront verification).
 // ---------------------------------------------------------------------------
 // Account ID for bucket name construction (same pattern as StorageStack)
 const accountId = config.account || process.env.CDK_DEFAULT_ACCOUNT || '000000000000';
 
-const cdnStack = new CdnStack(app, `${config.prefix}-cdn`, {
-  ...stackProps,
-  config,
-  frontendBucketName: `${config.prefix}-frontend-${accountId}`,
-  thumbnailsBucketName: `${config.prefix}-thumbnails-${accountId}`,
-  webAclArn: securityStack.webAcl?.attrArn,
-});
+let cdnStack: cdk.Stack | undefined;
+if (config.cdnEnabled) {
+  cdnStack = new CdnStack(app, `${config.prefix}-cdn`, {
+    ...stackProps,
+    config,
+    frontendBucketName: `${config.prefix}-frontend-${accountId}`,
+    thumbnailsBucketName: `${config.prefix}-thumbnails-${accountId}`,
+    webAclArn: securityStack.webAcl?.attrArn,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // 8. Monitoring Stack — CloudWatch alarms, CloudTrail, dashboards
@@ -149,6 +153,8 @@ const monitoringStack = new MonitoringStack(app, `${config.prefix}-monitoring`, 
 });
 monitoringStack.addDependency(computeStack);
 monitoringStack.addDependency(databaseStack);
-monitoringStack.addDependency(cdnStack);
+if (cdnStack) {
+  monitoringStack.addDependency(cdnStack);
+}
 
 app.synth();

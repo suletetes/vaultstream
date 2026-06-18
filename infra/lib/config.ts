@@ -95,6 +95,8 @@ export interface EnvironmentConfig {
   deletionProtection: boolean;
   /** Whether to enable point-in-time recovery for DynamoDB */
   pitrEnabled: boolean;
+  /** Whether CloudFront CDN distributions are deployed (requires verified account) */
+  cdnEnabled: boolean;
 }
 
 /**
@@ -143,6 +145,7 @@ export const devConfig: EnvironmentConfig = {
   },
   deletionProtection: false,
   pitrEnabled: false,
+  cdnEnabled: false,
 };
 
 /**
@@ -191,6 +194,7 @@ export const prodConfig: EnvironmentConfig = {
   },
   deletionProtection: true,
   pitrEnabled: true,
+  cdnEnabled: true,
 };
 
 /**
