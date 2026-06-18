@@ -152,11 +152,18 @@ export class SecurityStack extends cdk.Stack {
     // Dev (no CDN) serves the SPA from the S3 website endpoint over HTTP, so we
     // register that URL as an allowed callback/logout target in addition to the
     // production domain and localhost.
+    const frontendUrl = this.node.tryGetContext('frontendUrl') as string | undefined;
     const callbackUrls = [
       'https://app.vaultstream.dev/callback',
       'http://localhost:3000/callback',
     ];
     const logoutUrls = ['https://app.vaultstream.dev', 'http://localhost:3000'];
+
+    // Add CloudFront URL if provided via context (set after first CDN deploy)
+    if (frontendUrl) {
+      callbackUrls.push(`${frontendUrl}/callback`);
+      logoutUrls.push(frontendUrl);
+    }
 
     this.appClient = this.userPool.addClient('AppClient', {
       userPoolClientName: `${config.prefix}-app-client`,
