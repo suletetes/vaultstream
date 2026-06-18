@@ -11,10 +11,10 @@ import { type EnvironmentConfig } from '../config';
 export interface CdnStackProps extends cdk.StackProps {
   /** Environment configuration */
   config: EnvironmentConfig;
-  /** S3 bucket for frontend SPA assets */
-  frontendBucket: s3.IBucket;
-  /** S3 bucket for thumbnail assets */
-  thumbnailsBucket: s3.IBucket;
+  /** S3 frontend bucket name (imported by name to avoid circular cross-stack refs) */
+  frontendBucketName: string;
+  /** S3 thumbnails bucket name (imported by name to avoid circular cross-stack refs) */
+  thumbnailsBucketName: string;
   /** WAF WebACL ARN for association with distributions (optional — only in prod) */
   webAclArn?: string;
 }
@@ -43,7 +43,11 @@ export class CdnStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CdnStackProps) {
     super(scope, id, props);
 
-    const { config, frontendBucket, thumbnailsBucket, webAclArn } = props;
+    const { config, frontendBucketName, thumbnailsBucketName, webAclArn } = props;
+
+    // Import buckets by name to avoid circular cross-stack references with OAC
+    const frontendBucket = s3.Bucket.fromBucketName(this, 'FrontendBucketRef', frontendBucketName);
+    const thumbnailsBucket = s3.Bucket.fromBucketName(this, 'ThumbnailsBucketRef', thumbnailsBucketName);
 
     // =========================================================================
     // Security Response Headers Policy (Requirement 17.7)

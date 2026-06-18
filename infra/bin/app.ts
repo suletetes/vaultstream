@@ -127,13 +127,10 @@ computeStack.addDependency(messagingStack);
 const cdnStack = new CdnStack(app, `${config.prefix}-cdn`, {
   ...stackProps,
   config,
-  frontendBucket: storageStack.frontendBucket,
-  thumbnailsBucket: storageStack.thumbnailsBucket,
+  frontendBucketName: storageStack.frontendBucket.bucketName,
+  thumbnailsBucketName: storageStack.thumbnailsBucket.bucketName,
   webAclArn: securityStack.webAcl?.attrArn,
 });
-// Note: CDK infers dependency on storageStack via bucket references automatically.
-// Explicit addDependency would cause a cycle due to OAC policies.
-cdnStack.addDependency(securityStack);
 
 // ---------------------------------------------------------------------------
 // 8. Monitoring Stack — CloudWatch alarms, CloudTrail, dashboards
