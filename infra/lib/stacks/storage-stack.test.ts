@@ -93,11 +93,11 @@ describe('StorageStack', () => {
               NoncurrentVersionTransitions: Match.arrayWith([
                 Match.objectLike({
                   StorageClass: 'STANDARD_IA',
-                  TransitionInDays: 7,
+                  TransitionInDays: 30,
                 }),
                 Match.objectLike({
                   StorageClass: 'GLACIER_IR',
-                  TransitionInDays: 30,
+                  TransitionInDays: 60,
                 }),
               ]),
               NoncurrentVersionExpiration: Match.objectLike({

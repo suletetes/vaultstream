@@ -132,18 +132,18 @@ export class StorageStack extends cdk.Stack {
           ],
         },
         // Requirement 10.8: Noncurrent version transitions
-        // STANDARD_IA (7d), GLACIER_IR (30d), permanent delete (90d)
+        // STANDARD_IA (30d), GLACIER_IR (60d), permanent delete (90d)
         {
           id: 'NoncurrentVersionTransitions',
           enabled: true,
           noncurrentVersionTransitions: [
             {
               storageClass: s3.StorageClass.INFREQUENT_ACCESS,
-              transitionAfter: cdk.Duration.days(7),
+              transitionAfter: cdk.Duration.days(30),
             },
             {
               storageClass: s3.StorageClass.GLACIER_INSTANT_RETRIEVAL,
-              transitionAfter: cdk.Duration.days(30),
+              transitionAfter: cdk.Duration.days(60),
             },
           ],
           noncurrentVersionExpiration: cdk.Duration.days(90),

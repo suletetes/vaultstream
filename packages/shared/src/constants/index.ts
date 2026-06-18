@@ -147,8 +147,8 @@ export const LIFECYCLE_TRANSITIONS = {
   standardToStandardIA: 30,
   standardIAToGlacierIR: 90,
   glacierIRToDeepArchive: 365,
-  noncurrentToStandardIA: 7,
-  noncurrentToGlacierIR: 30,
+  noncurrentToStandardIA: 30,
+  noncurrentToGlacierIR: 60,
   noncurrentDelete: 90,
   incompleteMultipartCleanup: 7,
 } as const;
