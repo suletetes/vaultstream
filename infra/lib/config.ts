@@ -145,7 +145,7 @@ export const devConfig: EnvironmentConfig = {
   },
   deletionProtection: false,
   pitrEnabled: false,
-  cdnEnabled: true,
+  cdnEnabled: false,
 };
 
 /**

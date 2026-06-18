@@ -64,24 +64,18 @@ jobs:
         run: |
           SEC_STACK="${{ env.ENV_PREFIX }}-security"
           COMPUTE_STACK="${{ env.ENV_PREFIX }}-compute"
-          CDN_STACK="${{ env.ENV_PREFIX }}-cdn"
           COGNITO_DOMAIN=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
             --query "Stacks[0].Outputs[?OutputKey=='CognitoDomain'].OutputValue | [0]" --output text)
           CLIENT_ID=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
             --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue | [0]" --output text)
           API_BASE=$(aws cloudformation describe-stacks --stack-name "$COMPUTE_STACK" \
             --query "Stacks[0].Outputs[?OutputKey=='RestApiUrl'].OutputValue | [0]" --output text)
-          CF_DOMAIN=$(aws cloudformation describe-stacks --stack-name "$CDN_STACK" \
-            --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionDomain'].OutputValue | [0]" --output text 2>/dev/null || echo "")
-          if [ -n "$CF_DOMAIN" ] && [ "$CF_DOMAIN" != "None" ]; then
-            FRONTEND_URL="https://${CF_DOMAIN}"
-          else
-            FRONTEND_URL="http://${{ env.ENV_PREFIX }}-frontend-${{ steps.account.outputs.id }}.s3-website-${{ env.AWS_REGION }}.amazonaws.com"
-          fi
+          # Without CloudFront, use localhost as redirect (S3 site is HTTP, Cognito requires HTTPS).
+          # Auth only works when running frontend locally via `npm run dev:frontend`.
           export VITE_COGNITO_DOMAIN="$COGNITO_DOMAIN"
           export VITE_COGNITO_CLIENT_ID="$CLIENT_ID"
           export VITE_API_URL="${API_BASE%/}/api"
-          export VITE_REDIRECT_URI="${FRONTEND_URL}/callback"
+          export VITE_REDIRECT_URI="http://localhost:3000/callback"
           echo "Building frontend with:"
           echo "  VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN"
           echo "  VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID"
@@ -89,46 +83,19 @@ jobs:
           echo "  VITE_REDIRECT_URI=$VITE_REDIRECT_URI"
           npm run build
 
-      - name: Update Cognito Callback URLs with CloudFront Domain
-        run: |
-          CDN_STACK="${{ env.ENV_PREFIX }}-cdn"
-          SEC_STACK="${{ env.ENV_PREFIX }}-security"
-          CF_DOMAIN=$(aws cloudformation describe-stacks --stack-name "$CDN_STACK" \
-            --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionDomain'].OutputValue | [0]" --output text 2>/dev/null || echo "")
-          if [ -z "$CF_DOMAIN" ] || [ "$CF_DOMAIN" = "None" ]; then
-            echo "No CloudFront domain found, skipping Cognito update"
-            exit 0
-          fi
-          USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
-            --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue | [0]" --output text)
-          CLIENT_ID=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
-            --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue | [0]" --output text)
-          echo "Adding https://${CF_DOMAIN} to Cognito callbacks..."
-          aws cognito-idp update-user-pool-client \
-            --user-pool-id "$USER_POOL_ID" \
-            --client-id "$CLIENT_ID" \
-            --callback-urls "http://localhost:3000/callback" "https://app.vaultstream.dev/callback" "https://${CF_DOMAIN}/callback" \
-            --logout-urls "http://localhost:3000" "https://app.vaultstream.dev" "https://${CF_DOMAIN}" \
-            --allowed-o-auth-flows code \
-            --allowed-o-auth-scopes openid email profile \
-            --supported-identity-providers COGNITO \
-            --allowed-o-auth-flows-user-pool-client \
-            --no-cli-pager
-          echo "Cognito callback URLs updated with CloudFront domain"
-
       - name: Sync Frontend to S3
         run: |
           BUCKET="${{ env.ENV_PREFIX }}-frontend-${{ steps.account.outputs.id }}"
           echo "Syncing to s3://${BUCKET}/"
           aws s3 sync packages/frontend/dist/ "s3://${BUCKET}/" --delete
 
-      - name: Invalidate CloudFront
+      - name: Invalidate CloudFront (if CDN enabled)
         run: |
           CDN_STACK="${{ env.ENV_PREFIX }}-cdn"
           DIST_ID=$(aws cloudformation describe-stacks --stack-name "$CDN_STACK" \
             --query "Stacks[0].Outputs[?OutputKey=='FrontendDistributionId'].OutputValue | [0]" --output text 2>/dev/null || echo "")
           if [ -z "$DIST_ID" ] || [ "$DIST_ID" = "None" ]; then
-            echo "No CloudFront distribution found, skipping invalidation"
+            echo "No CloudFront distribution, skipping invalidation"
             exit 0
           fi
           echo "Invalidating distribution: $DIST_ID"
