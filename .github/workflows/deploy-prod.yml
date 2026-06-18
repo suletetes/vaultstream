@@ -62,6 +62,18 @@ jobs:
         working-directory: infra
         run: npx cdk deploy --all --context env=prod --require-approval never
 
+      - name: Bundle Lambda Code
+        run: npm run bundle:lambdas
+
+      - name: Deploy Lambda Code
+        run: node scripts/deploy-lambda-code.mjs --prefix ${{ env.ENV_PREFIX }} --region ${{ env.AWS_REGION }}
+
+      - name: Build Sharp Layer
+        run: node scripts/build-sharp-layer.mjs
+
+      - name: Deploy Sharp Layer
+        run: node scripts/deploy-sharp-layer.mjs --prefix ${{ env.ENV_PREFIX }} --region ${{ env.AWS_REGION }}
+
       - name: Build Frontend
         working-directory: packages/frontend
         run: npm run build
