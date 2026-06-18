@@ -73,10 +73,12 @@ jobs:
           aws s3 sync packages/frontend/dist/ "s3://${BUCKET}/" --delete
 
       - name: Invalidate CloudFront
-        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        if: ${{ env.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
             --paths "/*"
 
       - name: Post-Deploy Verification
@@ -104,6 +106,8 @@ jobs:
 
       - name: Rollback on Failure
         if: failure()
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
           echo "::error::Production deployment failed — initiating rollback"
           # Attempt CloudFormation rollback for any stacks in failed state
@@ -116,9 +120,9 @@ jobs:
             aws cloudformation rollback-stack --stack-name "$STACK" || true
           done
           # Invalidate CloudFront to serve rolled-back content
-          if [ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+          if [ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
             aws cloudfront create-invalidation \
-              --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+              --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
               --paths "/*" || true
           fi
           echo "Rollback initiated. Manual verification required."
