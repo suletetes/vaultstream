@@ -29,19 +29,28 @@ export function SearchPage() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Search</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Search</h2>
+          <p className="text-sm text-gray-500 mt-1">Find files by name, tags, or type</p>
+        </div>
 
-        {/* Search input */}
-        <div className="space-y-4">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by filename..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          />
+        {/* Search controls */}
+        <div className="card p-5 space-y-4">
+          {/* Search input */}
+          <div className="relative">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by filename..."
+              className="input-field pl-10"
+            />
+          </div>
 
-          <div className="flex gap-4 flex-wrap">
+          <div className="flex gap-3 flex-wrap items-end">
             {/* Tag filter */}
             <div className="flex items-center gap-2">
               <input
@@ -49,10 +58,10 @@ export function SearchPage() {
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                placeholder="Add tag filter..."
-                className="px-3 py-1.5 border border-gray-300 rounded text-sm"
+                placeholder="Add tag..."
+                className="input-field w-40"
               />
-              <button onClick={addTag} className="px-3 py-1.5 bg-gray-100 rounded text-sm hover:bg-gray-200">
+              <button onClick={addTag} className="btn-secondary py-2.5">
                 Add
               </button>
             </div>
@@ -61,7 +70,7 @@ export function SearchPage() {
             <select
               value={mimeType}
               onChange={(e) => setMimeType(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded text-sm"
+              className="input-field w-40"
             >
               <option value="">All types</option>
               <option value="application/pdf">PDF</option>
@@ -76,9 +85,13 @@ export function SearchPage() {
           {tags.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               {tags.map((tag) => (
-                <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-brand-100 text-brand-700 rounded text-sm">
+                <span key={tag} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-50 text-brand-700 rounded-md text-sm font-medium">
                   {tag}
-                  <button onClick={() => removeTag(tag)} className="text-brand-500 hover:text-brand-700">×</button>
+                  <button onClick={() => removeTag(tag)} className="text-brand-400 hover:text-brand-600 transition-colors">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </span>
               ))}
             </div>
@@ -87,17 +100,22 @@ export function SearchPage() {
 
         {/* Results */}
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" />
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-10 h-10 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin" />
+            <p className="text-sm text-gray-500 mt-4">Searching...</p>
           </div>
         ) : data?.items ? (
           <>
-            <p className="text-sm text-gray-500">{data.total} results found</p>
+            <p className="text-sm text-gray-500">{data.total} {data.total === 1 ? 'result' : 'results'} found</p>
             <FileList files={data.items} showDelete={false} />
           </>
         ) : (
-          <div className="text-center py-12 text-gray-500">
-            Enter a search query to find files
+          <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+            <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <p className="text-base font-medium text-gray-500">Search your vault</p>
+            <p className="text-sm mt-1">Enter a filename, add tags, or filter by type</p>
           </div>
         )}
       </div>
