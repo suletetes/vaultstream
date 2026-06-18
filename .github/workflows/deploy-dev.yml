@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - run: npm ci
@@ -48,7 +48,7 @@ jobs:
 
       - name: Sync Frontend to S3
         run: |
-          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}/ --delete
+          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.ACCOUNT_ID }}/ --delete
 
       - name: Invalidate CloudFront
         run: |

@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - run: npm ci
@@ -63,7 +63,7 @@ jobs:
 
       - name: Sync Frontend to S3
         run: |
-          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}/ --delete
+          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.ACCOUNT_ID }}/ --delete
 
       - name: Invalidate CloudFront
         run: |
@@ -89,7 +89,7 @@ jobs:
           echo "::error::Production deployment failed — initiating rollback"
           # Restore previous frontend from S3 versioning
           aws s3api list-object-versions \
-            --bucket "vaultstream-frontend-${{ secrets.AWS_ACCOUNT_ID }}" \
+            --bucket "vaultstream-frontend-${{ secrets.ACCOUNT_ID }}" \
             --query 'Versions[?IsLatest==`false`]' --output json > /dev/null 2>&1 || true
           # Redeploy the last known-good CDK state via CloudFormation rollback
           STACKS=$(aws cloudformation list-stacks \
