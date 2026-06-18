@@ -102,9 +102,16 @@ export class BulkService {
 
     for (const fileId of fileIds) {
       try {
-        // generateDownloadUrl requires fileMetadata and isOwner — for bulk, we treat caller as owner
-        // In a full implementation, we'd fetch metadata first. For now, skip files that fail.
-        const result = await fileService.generateDownloadUrl({ userId, fileId, fileMetadata: undefined as never, isOwner: true });
+        // Fetch the owner's file metadata, then generate a presigned URL.
+        // Files that don't exist, aren't owned, or fail eligibility gates
+        // (infected, pending scan, archived, deleted) are skipped.
+        const fileMetadata = await fileService.getOwnedFileMetadata(userId, fileId);
+        if (!fileMetadata) {
+          logger.warn({ fileId }, 'Bulk download: file not found or not owned by user');
+          continue;
+        }
+
+        const result = await fileService.generateDownloadUrl({ userId, fileId, fileMetadata, isOwner: true });
         urls.push({ fileId, downloadUrl: result.downloadUrl });
       } catch (error) {
         logger.warn({ fileId, error: (error as Error).message }, 'Bulk download URL generation failed');

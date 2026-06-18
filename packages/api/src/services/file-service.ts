@@ -1062,6 +1062,21 @@ export class FileService {
   // ─── Private Helpers ────────────────────────────────────────────────────
 
   /**
+   * Fetch metadata for a file owned by the user.
+   * Returns null if the file does not exist under the user's partition.
+   */
+  async getOwnedFileMetadata(userId: string, fileId: string): Promise<FileEntity | null> {
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: userPK(userId), SK: fileSK(fileId) },
+      }),
+    );
+
+    return (result.Item as FileEntity) ?? null;
+  }
+
+  /**
    * Verify that the user owns the file. Returns the file entity.
    * Throws FORBIDDEN if not found.
    */
