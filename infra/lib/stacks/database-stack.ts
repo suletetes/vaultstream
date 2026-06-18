@@ -53,7 +53,9 @@ export class DatabaseStack extends cdk.Stack {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      pointInTimeRecovery: config.pitrEnabled,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.pitrEnabled,
+      },
       timeToLiveAttribute: 'expiresAt',
       removalPolicy: config.deletionProtection
         ? cdk.RemovalPolicy.RETAIN
