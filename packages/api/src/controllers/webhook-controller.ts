@@ -76,7 +76,7 @@ export async function deleteWebhook(req: Request, res: Response, next: NextFunct
  * GET /api/webhooks/:id/deliveries
  * Placeholder — delivery log would be stored separately in production.
  */
-export async function getDeliveryLog(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getDeliveryLog(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // In a full implementation, this would query a delivery log table
     res.status(200).json({ items: [], message: 'Delivery log not yet implemented' });

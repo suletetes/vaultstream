@@ -5,27 +5,17 @@
  * CacheHitRatio, PresignedUrlLatency, StorageUsedBytes.
  *
  * Requirements: 32.2, 16.10
+ *
+ * NOTE: @aws-sdk/client-cloudwatch is not yet installed.
+ * These are stub functions that will be connected when the dependency is added.
  */
 
-import { CloudWatchClient, PutMetricDataCommand, MetricDatum } from '@aws-sdk/client-cloudwatch';
 import pino from 'pino';
 
 const logger = pino({ name: 'cloudwatch-metrics' });
 
-const NAMESPACE = 'VaultStream';
-
-const client = new CloudWatchClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  ...(process.env.AWS_ENDPOINT_URL && { endpoint: process.env.AWS_ENDPOINT_URL }),
-});
-
-// Buffer metrics and flush periodically to reduce API calls
-let metricBuffer: MetricDatum[] = [];
-const FLUSH_INTERVAL_MS = 60_000; // 1 minute
-const MAX_BUFFER_SIZE = 20;
-
 /**
- * Record a custom metric.
+ * Record a custom metric (stub — logs locally until CloudWatch SDK is installed).
  */
 export function recordMetric(params: {
   name: string;
@@ -33,39 +23,14 @@ export function recordMetric(params: {
   unit: 'Count' | 'Milliseconds' | 'Bytes' | 'Percent';
   dimensions?: Array<{ Name: string; Value: string }>;
 }): void {
-  const datum: MetricDatum = {
-    MetricName: params.name,
-    Value: params.value,
-    Unit: params.unit,
-    Timestamp: new Date(),
-    Dimensions: params.dimensions,
-  };
-
-  metricBuffer.push(datum);
-
-  if (metricBuffer.length >= MAX_BUFFER_SIZE) {
-    flushMetrics();
-  }
+  logger.debug({ metric: params.name, value: params.value, unit: params.unit }, 'Metric recorded (stub)');
 }
 
 /**
- * Flush buffered metrics to CloudWatch.
+ * Flush buffered metrics to CloudWatch (stub — no-op until SDK is installed).
  */
 export async function flushMetrics(): Promise<void> {
-  if (metricBuffer.length === 0) return;
-
-  const dataToSend = [...metricBuffer];
-  metricBuffer = [];
-
-  try {
-    await client.send(new PutMetricDataCommand({
-      Namespace: NAMESPACE,
-      MetricData: dataToSend,
-    }));
-  } catch (error) {
-    logger.warn({ err: (error as Error).message, count: dataToSend.length }, 'Failed to publish CloudWatch metrics');
-    // Don't re-buffer on failure — metrics are best-effort
-  }
+  // No-op stub
 }
 
 // ─── Convenience Methods ────────────────────────────────────────────────────
@@ -93,8 +58,3 @@ export function recordPresignedUrlLatency(ms: number): void {
 export function recordStorageUsed(userId: string, bytes: number): void {
   recordMetric({ name: 'StorageUsedBytes', value: bytes, unit: 'Bytes', dimensions: [{ Name: 'UserId', Value: userId }] });
 }
-
-// Periodic flush
-setInterval(() => {
-  flushMetrics().catch(() => {});
-}, FLUSH_INTERVAL_MS);

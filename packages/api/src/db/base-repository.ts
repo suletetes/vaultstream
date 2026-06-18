@@ -55,7 +55,7 @@ export async function getItem<T>(pk: string, sk: string): Promise<T | null> {
 /**
  * Put (create or overwrite) an item.
  */
-export async function putItem<T extends Record<string, unknown>>(item: T): Promise<void> {
+export async function putItem<T extends object>(item: T): Promise<void> {
   await docClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
