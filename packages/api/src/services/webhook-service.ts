@@ -12,10 +12,12 @@
  */
 
 import crypto from 'crypto';
-import { docClient, TABLE_NAME } from '../db/dynamodb';
+
 import { PutCommand, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { AppError, ErrorCode, generateId } from '@vaultstream/shared';
 import pino from 'pino';
+
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 
 const logger = pino({ name: 'webhook-service' });
 

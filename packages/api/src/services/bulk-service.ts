@@ -11,10 +11,11 @@
  * Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.7
  */
 
-import { fileService } from './file-service';
-import { folderService } from './folder-service';
 import { AppError, ErrorCode } from '@vaultstream/shared';
 import pino from 'pino';
+
+import { fileService } from './file-service';
+import { folderService } from './folder-service';
 
 const logger = pino({ name: 'bulk-service' });
 

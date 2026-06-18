@@ -13,11 +13,13 @@
  * Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7, 23.8
  */
 
-import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { getAuditService } from './audit-service';
 import { AppError, ErrorCode } from '@vaultstream/shared';
 import pino from 'pino';
+
+import { docClient, TABLE_NAME } from '../db/dynamodb';
+
+import { getAuditService } from './audit-service';
 
 const logger = pino({ name: 'admin-service' });
 

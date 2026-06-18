@@ -10,9 +10,10 @@
  * Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7
  */
 
-import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { PutCommand, QueryCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { AppError, ErrorCode, generateId } from '@vaultstream/shared';
+
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 
 const MAX_COMMENT_LENGTH = 2000;
 const MAX_COMMENTS_PER_FILE = 500;

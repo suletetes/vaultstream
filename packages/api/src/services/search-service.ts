@@ -11,9 +11,10 @@
  * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8
  */
 
-import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { QueryCommand, QueryCommandInput } from '@aws-sdk/lib-dynamodb';
 import pino from 'pino';
+
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 
 const logger = pino({ name: 'search-service' });
 

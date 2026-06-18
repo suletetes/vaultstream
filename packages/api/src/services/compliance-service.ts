@@ -7,11 +7,14 @@
  * Requirements: 40.1, 40.7, 40.8
  */
 
-import { docClient, TABLE_NAME } from '../db/dynamodb';
-import { QueryCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
-import { getAuditService } from './audit-service';
+import { QueryCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import pino from 'pino';
+
+import { docClient, TABLE_NAME } from '../db/dynamodb';
+
+import { getAuditService } from './audit-service';
+
 
 const logger = pino({ name: 'compliance-service' });
 

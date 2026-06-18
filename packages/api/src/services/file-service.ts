@@ -9,16 +9,10 @@
  * - Upload state tracked in Redis with 1-hour TTL
  */
 
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { GetCommand, PutCommand, UpdateCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import pino from 'pino';
-
-import { docClient, TABLE_NAME } from '../db/dynamodb';
-import { userPK, fileSK, gsi1Keys, gsi2Keys } from '../db/key-builders';
-import { EncryptionService } from './encryption-service';
-import { enforceQuota, incrementUsage, decrementUsage, checkQuota } from './quota-service';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   generateId,
   sanitizeFilename,
@@ -40,7 +34,15 @@ import {
   buildPaginatedResult,
 } from '@vaultstream/shared';
 import type { AllowedMimeType, FileEntity, FileVersionEntity, PaginationParams, PaginatedResult } from '@vaultstream/shared';
+import pino from 'pino';
+
 import type { CacheService } from '../cache/cache-service';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
+import { userPK, fileSK, gsi1Keys, gsi2Keys } from '../db/key-builders';
+
+import { EncryptionService } from './encryption-service';
+import { enforceQuota, incrementUsage, decrementUsage, checkQuota } from './quota-service';
+
 
 const logger = pino({ name: 'file-service' });
 
@@ -879,7 +881,7 @@ export class FileService {
       deletedAt: undefined,
       folderId: targetFolderId,
       updatedAt: now,
-      GSI2PK: `FOLDER#${targetFolderId}` as `FOLDER#${string}`,
+      GSI2PK: `FOLDER#${targetFolderId}`,
     };
   }
 
