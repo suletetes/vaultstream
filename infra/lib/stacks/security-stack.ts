@@ -68,20 +68,6 @@ export class SecurityStack extends cdk.Stack {
       }),
     );
 
-    // Key policy: API Lambda role — GenerateDataKey, Decrypt, DescribeKey
-    const apiLambdaRolePrincipal = new iam.ArnPrincipal(
-      `arn:aws:iam::${cdk.Aws.ACCOUNT_ID}:role/${config.prefix}-api-lambda-role`,
-    );
-    this.masterKey.addToResourcePolicy(
-      new iam.PolicyStatement({
-        sid: 'AllowAPILambdaKeyUsage',
-        effect: iam.Effect.ALLOW,
-        principals: [apiLambdaRolePrincipal],
-        actions: ['kms:GenerateDataKey', 'kms:Decrypt', 'kms:DescribeKey'],
-        resources: ['*'],
-      }),
-    );
-
     // Key policy: S3 service — GenerateDataKey, Decrypt (via kms:ViaService condition)
     this.masterKey.addToResourcePolicy(
       new iam.PolicyStatement({

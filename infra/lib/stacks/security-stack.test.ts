@@ -48,15 +48,15 @@ describe('SecurityStack', () => {
       });
     });
 
-    it('should include key policy allowing API Lambda role usage', () => {
+    it('should allow API Lambda access via account root principal (enables IAM-based grants)', () => {
       const { template } = createStack();
       template.hasResourceProperties('AWS::KMS::Key', {
         KeyPolicy: Match.objectLike({
           Statement: Match.arrayWith([
             Match.objectLike({
-              Sid: 'AllowAPILambdaKeyUsage',
+              Sid: 'AllowAdminFullKeyManagement',
               Effect: 'Allow',
-              Action: ['kms:GenerateDataKey', 'kms:Decrypt', 'kms:DescribeKey'],
+              Action: 'kms:*',
             }),
           ]),
         }),
