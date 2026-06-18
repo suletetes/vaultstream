@@ -10,15 +10,10 @@
  * Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7
  */
 
-import { getDynamoDBDocClient } from '../db/dynamodb';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { PutCommand, QueryCommand, UpdateCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
-import { AppError } from '@vaultstream/shared';
-import { generateUlid } from '@vaultstream/shared';
-import pino from 'pino';
+import { AppError, ErrorCode, generateId } from '@vaultstream/shared';
 
-const logger = pino({ name: 'comment-service' });
-
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'vaultstream-metadata';
 const MAX_COMMENT_LENGTH = 2000;
 const MAX_COMMENTS_PER_FILE = 500;
 const EDIT_WINDOW_HOURS = 24;
@@ -52,36 +47,34 @@ export class CommentService {
   async addComment(params: AddCommentParams): Promise<Comment> {
     // Validate text length
     if (!params.text || params.text.length > MAX_COMMENT_LENGTH) {
-      throw new AppError(
-        'VALIDATION_ERROR',
-        `Comment must be between 1 and ${MAX_COMMENT_LENGTH} characters`,
-        400
-      );
+      throw new AppError({
+        code: ErrorCode.VALIDATION_ERROR,
+        message: `Comment must be between 1 and ${MAX_COMMENT_LENGTH} characters`,
+      });
     }
 
     // Check comment count limit
     const existingCount = await this.getCommentCount(params.fileId);
     if (existingCount >= MAX_COMMENTS_PER_FILE) {
-      throw new AppError(
-        'VALIDATION_ERROR',
-        `Maximum ${MAX_COMMENTS_PER_FILE} comments per file`,
-        400
-      );
+      throw new AppError({
+        code: ErrorCode.VALIDATION_ERROR,
+        message: `Maximum ${MAX_COMMENTS_PER_FILE} comments per file`,
+      });
     }
 
     // Validate parent comment exists if threaded reply
     if (params.parentCommentId) {
       const parent = await this.getComment(params.fileId, params.parentCommentId);
       if (!parent) {
-        throw new AppError('VALIDATION_ERROR', 'Parent comment not found', 400);
+        throw new AppError({ code: ErrorCode.VALIDATION_ERROR, message: 'Parent comment not found' });
       }
       // Only one level of nesting allowed
       if (parent.parentCommentId) {
-        throw new AppError('VALIDATION_ERROR', 'Only one level of comment nesting is allowed', 400);
+        throw new AppError({ code: ErrorCode.VALIDATION_ERROR, message: 'Only one level of comment nesting is allowed' });
       }
     }
 
-    const commentId = `comment_${generateUlid()}`;
+    const commentId = `comment_${generateId()}`;
     const now = new Date().toISOString();
 
     const comment: Comment = {
@@ -94,8 +87,7 @@ export class CommentService {
       updatedAt: now,
     };
 
-    const client = getDynamoDBDocClient();
-    await client.send(new PutCommand({
+    await docClient.send(new PutCommand({
       TableName: TABLE_NAME,
       Item: {
         PK: `FILE#${params.fileId}`,
@@ -112,8 +104,7 @@ export class CommentService {
    * List all comments for a file, sorted by creation time ascending.
    */
   async listComments(fileId: string): Promise<Comment[]> {
-    const client = getDynamoDBDocClient();
-    const result = await client.send(new QueryCommand({
+    const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
       ExpressionAttributeValues: {
@@ -140,27 +131,26 @@ export class CommentService {
    */
   async editComment(fileId: string, commentId: string, userId: string, newText: string): Promise<Comment> {
     if (!newText || newText.length > MAX_COMMENT_LENGTH) {
-      throw new AppError('VALIDATION_ERROR', `Comment must be between 1 and ${MAX_COMMENT_LENGTH} characters`, 400);
+      throw new AppError({ code: ErrorCode.VALIDATION_ERROR, message: `Comment must be between 1 and ${MAX_COMMENT_LENGTH} characters` });
     }
 
     const comment = await this.getComment(fileId, commentId);
     if (!comment) {
-      throw new AppError('FILE_NOT_FOUND', 'Comment not found', 404);
+      throw new AppError({ code: ErrorCode.FILE_NOT_FOUND, message: 'Comment not found' });
     }
 
     if (comment.authorId !== userId) {
-      throw new AppError('FORBIDDEN', 'Only the comment author can edit', 403);
+      throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Only the comment author can edit' });
     }
 
     // Check 24h edit window
     const createdAt = new Date(comment.createdAt).getTime();
     const now = Date.now();
     if (now - createdAt > EDIT_WINDOW_HOURS * 60 * 60 * 1000) {
-      throw new AppError('FORBIDDEN', 'Comments can only be edited within 24 hours of creation', 403);
+      throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Comments can only be edited within 24 hours of creation' });
     }
 
-    const client = getDynamoDBDocClient();
-    await client.send(new UpdateCommand({
+    await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { PK: `FILE#${fileId}`, SK: `COMMENT#${commentId}` },
       UpdateExpression: 'SET #text = :text, updatedAt = :now',
@@ -177,24 +167,23 @@ export class CommentService {
   async deleteComment(fileId: string, commentId: string, userId: string, isFileOwner: boolean): Promise<void> {
     const comment = await this.getComment(fileId, commentId);
     if (!comment) {
-      throw new AppError('FILE_NOT_FOUND', 'Comment not found', 404);
+      throw new AppError({ code: ErrorCode.FILE_NOT_FOUND, message: 'Comment not found' });
     }
 
     // File owner can delete any comment
     if (!isFileOwner) {
       if (comment.authorId !== userId) {
-        throw new AppError('FORBIDDEN', 'Only the comment author or file owner can delete', 403);
+        throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Only the comment author or file owner can delete' });
       }
 
       // Check 24h window for non-owners
       const createdAt = new Date(comment.createdAt).getTime();
       if (Date.now() - createdAt > EDIT_WINDOW_HOURS * 60 * 60 * 1000) {
-        throw new AppError('FORBIDDEN', 'Comments can only be deleted within 24 hours of creation', 403);
+        throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Comments can only be deleted within 24 hours of creation' });
       }
     }
 
-    const client = getDynamoDBDocClient();
-    await client.send(new DeleteCommand({
+    await docClient.send(new DeleteCommand({
       TableName: TABLE_NAME,
       Key: { PK: `FILE#${fileId}`, SK: `COMMENT#${commentId}` },
     }));
@@ -203,8 +192,7 @@ export class CommentService {
   // ─── Private Helpers ────────────────────────────────────────────────────────
 
   private async getComment(fileId: string, commentId: string): Promise<Comment | null> {
-    const client = getDynamoDBDocClient();
-    const result = await client.send(new QueryCommand({
+    const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'PK = :pk AND SK = :sk',
       ExpressionAttributeValues: {
@@ -229,8 +217,7 @@ export class CommentService {
   }
 
   private async getCommentCount(fileId: string): Promise<number> {
-    const client = getDynamoDBDocClient();
-    const result = await client.send(new QueryCommand({
+    const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
       ExpressionAttributeValues: {

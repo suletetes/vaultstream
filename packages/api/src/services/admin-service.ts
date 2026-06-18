@@ -13,15 +13,13 @@
  * Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7, 23.8
  */
 
-import { getDynamoDBDocClient } from '../db/dynamodb';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { getAuditService } from './audit-service';
-import { AppError } from '@vaultstream/shared';
+import { AppError, ErrorCode } from '@vaultstream/shared';
 import pino from 'pino';
 
 const logger = pino({ name: 'admin-service' });
-
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'vaultstream-metadata';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +58,7 @@ export class AdminService {
    */
   verifyAdminRole(role: string | undefined): void {
     if (role !== 'admin') {
-      throw new AppError('FORBIDDEN', 'Admin access required', 403);
+      throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Admin access required' });
     }
   }
 
@@ -68,10 +66,8 @@ export class AdminService {
    * List all users (paginated) via GSI1 (USERS partition).
    */
   async listUsers(params: { limit?: number; cursor?: string }): Promise<{ users: AdminUser[]; nextCursor?: string }> {
-    const client = getDynamoDBDocClient();
-    const limit = Math.min(params.limit || 20, 100);
-
-    const result = await client.send(new QueryCommand({
+    const limit = params.limit ?? 20;
+    const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,
       IndexName: 'GSI1',
       KeyConditionExpression: 'GSI1PK = :pk',
@@ -81,14 +77,14 @@ export class AdminService {
       ...(params.cursor && { ExclusiveStartKey: JSON.parse(Buffer.from(params.cursor, 'base64').toString()) }),
     }));
 
-    const users: AdminUser[] = (result.Items || []).map((item) => ({
-      userId: item.PK?.replace('USER#', '') || '',
+    const users: AdminUser[] = (result.Items || []).map((item: Record<string, unknown>) => ({
+      userId: (item.PK as string)?.replace('USER#', '') || '',
       email: item.email as string,
       displayName: item.displayName as string,
       tier: item.tier as string,
-      role: item.role as string || 'user',
-      storageUsedBytes: item.storageUsedBytes as number || 0,
-      storageQuotaBytes: item.storageQuotaBytes as number || 0,
+      role: (item.role as string) || 'user',
+      storageUsedBytes: (item.storageUsedBytes as number) || 0,
+      storageQuotaBytes: (item.storageQuotaBytes as number) || 0,
       createdAt: item.createdAt as string,
       updatedAt: item.updatedAt as string,
     }));
@@ -133,9 +129,7 @@ export class AdminService {
    * Revokes sessions, blocks auth, preserves files.
    */
   async disableUser(adminUserId: string, targetUserId: string): Promise<void> {
-    const client = getDynamoDBDocClient();
-
-    await client.send(new UpdateCommand({
+    await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { PK: `USER#${targetUserId}`, SK: `PROFILE#${targetUserId}` },
       UpdateExpression: 'SET #status = :disabled, updatedAt = :now',

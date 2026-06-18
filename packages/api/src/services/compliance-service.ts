@@ -7,15 +7,14 @@
  * Requirements: 40.1, 40.7, 40.8
  */
 
-import { getDynamoDBDocClient } from '../db/dynamodb';
-import { QueryCommand, DeleteCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
+import { QueryCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { getAuditService } from './audit-service';
 import pino from 'pino';
 
 const logger = pino({ name: 'compliance-service' });
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'vaultstream-metadata';
 const FILES_BUCKET = process.env.S3_FILES_BUCKET || 'vaultstream-files-local';
 const THUMBNAILS_BUCKET = process.env.S3_THUMBNAILS_BUCKET || 'vaultstream-thumbnails-local';
 
@@ -39,7 +38,7 @@ export class ComplianceService {
     let deletedItems = 0;
     let deletedObjects = 0;
 
-    const dynamodb = getDynamoDBDocClient();
+    const dynamodb = docClient;
 
     // 1. Delete all DynamoDB items for the user
     const userItems = await this.queryAllUserItems(targetUserId);
@@ -89,7 +88,7 @@ export class ComplianceService {
   // ─── Private Helpers ────────────────────────────────────────────────────────
 
   private async queryAllUserItems(userId: string): Promise<Array<{ PK: string; SK: string }>> {
-    const dynamodb = getDynamoDBDocClient();
+    const dynamodb = docClient;
     const items: Array<{ PK: string; SK: string }> = [];
 
     let lastKey: Record<string, unknown> | undefined;
@@ -112,7 +111,7 @@ export class ComplianceService {
   }
 
   private async querySharesForUser(userId: string): Promise<Array<{ PK: string; SK: string }>> {
-    const dynamodb = getDynamoDBDocClient();
+    const dynamodb = docClient;
     const items: Array<{ PK: string; SK: string }> = [];
 
     let lastKey: Record<string, unknown> | undefined;

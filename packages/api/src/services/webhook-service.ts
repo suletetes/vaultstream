@@ -12,15 +12,13 @@
  */
 
 import crypto from 'crypto';
-import { getDynamoDBDocClient } from '../db/dynamodb';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { PutCommand, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { AppError } from '@vaultstream/shared';
-import { generateUlid } from '@vaultstream/shared';
+import { AppError, ErrorCode, generateId } from '@vaultstream/shared';
 import pino from 'pino';
 
 const logger = pino({ name: 'webhook-service' });
 
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'vaultstream-metadata';
 const MAX_WEBHOOKS_PER_USER = 5;
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 5000, 30000]; // 1s, 5s, 30s
@@ -91,20 +89,19 @@ export class WebhookService {
   }): Promise<WebhookConfig> {
     // Enforce enterprise tier
     if (params.tier !== 'enterprise') {
-      throw new AppError('FORBIDDEN', 'Webhooks are available for enterprise tier only', 403);
+      throw new AppError({ code: ErrorCode.FORBIDDEN, message: 'Webhooks are available for enterprise tier only' });
     }
 
     // Check existing webhook count
     const existing = await this.listWebhooks(params.userId);
     if (existing.length >= MAX_WEBHOOKS_PER_USER) {
-      throw new AppError(
-        'VALIDATION_ERROR',
-        `Maximum ${MAX_WEBHOOKS_PER_USER} webhooks per user`,
-        400
-      );
+      throw new AppError({
+        code: ErrorCode.VALIDATION_ERROR,
+        message: `Maximum ${MAX_WEBHOOKS_PER_USER} webhooks per user`,
+      });
     }
 
-    const webhookId = `webhook_${generateUlid()}`;
+    const webhookId = `webhook_${generateId()}`;
     const now = new Date().toISOString();
 
     const webhook: WebhookConfig = {
@@ -119,8 +116,7 @@ export class WebhookService {
       updatedAt: now,
     };
 
-    const client = getDynamoDBDocClient();
-    await client.send(new PutCommand({
+    await docClient.send(new PutCommand({
       TableName: TABLE_NAME,
       Item: {
         PK: `USER#${params.userId}`,
@@ -137,8 +133,7 @@ export class WebhookService {
    * List all webhooks for a user.
    */
   async listWebhooks(userId: string): Promise<WebhookConfig[]> {
-    const client = getDynamoDBDocClient();
-    const result = await client.send(new QueryCommand({
+    const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
       ExpressionAttributeValues: {
@@ -164,8 +159,7 @@ export class WebhookService {
    * Delete a webhook.
    */
   async deleteWebhook(userId: string, webhookId: string): Promise<void> {
-    const client = getDynamoDBDocClient();
-    await client.send(new DeleteCommand({
+    await docClient.send(new DeleteCommand({
       TableName: TABLE_NAME,
       Key: {
         PK: `USER#${userId}`,
@@ -181,7 +175,7 @@ export class WebhookService {
   async deliver(webhook: WebhookConfig, payload: WebhookPayload): Promise<WebhookDelivery> {
     if (webhook.status === 'paused') {
       return {
-        deliveryId: `del_${generateUlid()}`,
+        deliveryId: `del_${generateId()}`,
         webhookId: webhook.webhookId,
         eventType: payload.event,
         status: 'failed',
@@ -215,7 +209,7 @@ export class WebhookService {
             'Content-Type': 'application/json',
             'X-VaultStream-Signature': signature,
             'X-VaultStream-Event': payload.event,
-            'X-VaultStream-Delivery': `del_${generateUlid()}`,
+            'X-VaultStream-Delivery': `del_${generateId()}`,
           },
           body: payloadString,
           signal: controller.signal,
@@ -229,7 +223,7 @@ export class WebhookService {
           // Success — reset failure counter
           await this.resetFailureCount(webhook);
           return {
-            deliveryId: `del_${generateUlid()}`,
+            deliveryId: `del_${generateId()}`,
             webhookId: webhook.webhookId,
             eventType: payload.event,
             status: 'success',
@@ -252,7 +246,7 @@ export class WebhookService {
     await this.incrementFailureCount(webhook);
 
     return {
-      deliveryId: `del_${generateUlid()}`,
+      deliveryId: `del_${generateId()}`,
       webhookId: webhook.webhookId,
       eventType: payload.event,
       status: 'failed',
@@ -267,8 +261,7 @@ export class WebhookService {
   // ─── Private Helpers ────────────────────────────────────────────────────────
 
   private async resetFailureCount(webhook: WebhookConfig): Promise<void> {
-    const client = getDynamoDBDocClient();
-    await client.send(new UpdateCommand({
+    await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { PK: `USER#${webhook.userId}`, SK: `WEBHOOK#${webhook.webhookId}` },
       UpdateExpression: 'SET consecutiveFailures = :zero, #status = :active, updatedAt = :now',
@@ -281,8 +274,7 @@ export class WebhookService {
     const newCount = webhook.consecutiveFailures + 1;
     const newStatus = newCount >= MAX_CONSECUTIVE_FAILURES ? 'paused' : 'failing';
 
-    const client = getDynamoDBDocClient();
-    await client.send(new UpdateCommand({
+    await docClient.send(new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { PK: `USER#${webhook.userId}`, SK: `WEBHOOK#${webhook.webhookId}` },
       UpdateExpression: 'SET consecutiveFailures = :count, #status = :status, updatedAt = :now',

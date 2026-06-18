@@ -11,13 +11,11 @@
  * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8
  */
 
-import { getDynamoDBDocClient } from '../db/dynamodb';
+import { docClient, TABLE_NAME } from '../db/dynamodb';
 import { QueryCommand, QueryCommandInput } from '@aws-sdk/lib-dynamodb';
 import pino from 'pino';
 
 const logger = pino({ name: 'search-service' });
-
-const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'vaultstream-metadata';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -114,8 +112,6 @@ export class SearchService {
   // ─── Private Helpers ────────────────────────────────────────────────────────
 
   private async searchOwnFiles(params: SearchParams, limit: number): Promise<SearchResultItem[]> {
-    const client = getDynamoDBDocClient();
-
     // Query user's files from the main table
     const queryInput: QueryCommandInput = {
       TableName: TABLE_NAME,
@@ -136,7 +132,7 @@ export class SearchService {
     }
 
     try {
-      const result = await client.send(new QueryCommand(queryInput));
+      const result = await docClient.send(new QueryCommand(queryInput));
       return (result.Items || []).map((item) => this.mapToSearchResult(item, false));
     } catch (error) {
       logger.error({ err: (error as Error).message }, 'Failed to search own files');
@@ -145,8 +141,6 @@ export class SearchService {
   }
 
   private async searchSharedFiles(params: SearchParams, limit: number): Promise<SearchResultItem[]> {
-    const client = getDynamoDBDocClient();
-
     // Query shared files via GSI3
     const queryInput: QueryCommandInput = {
       TableName: TABLE_NAME,
@@ -160,7 +154,7 @@ export class SearchService {
     };
 
     try {
-      const result = await client.send(new QueryCommand(queryInput));
+      const result = await docClient.send(new QueryCommand(queryInput));
       const items = (result.Items || []).map((item) => this.mapToSearchResult(item, true));
 
       // Apply filename filter for shared files
