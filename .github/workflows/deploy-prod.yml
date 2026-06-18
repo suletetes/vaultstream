@@ -76,7 +76,25 @@ jobs:
 
       - name: Build Frontend
         working-directory: packages/frontend
-        run: npm run build
+        run: |
+          SEC_STACK="${{ env.ENV_PREFIX }}-security"
+          COMPUTE_STACK="${{ env.ENV_PREFIX }}-compute"
+          COGNITO_DOMAIN=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='CognitoDomain'].OutputValue | [0]" --output text)
+          CLIENT_ID=$(aws cloudformation describe-stacks --stack-name "$SEC_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue | [0]" --output text)
+          API_BASE=$(aws cloudformation describe-stacks --stack-name "$COMPUTE_STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='RestApiUrl'].OutputValue | [0]" --output text)
+          export VITE_COGNITO_DOMAIN="$COGNITO_DOMAIN"
+          export VITE_COGNITO_CLIENT_ID="$CLIENT_ID"
+          export VITE_API_URL="${API_BASE%/}/api"
+          export VITE_REDIRECT_URI="https://app.vaultstream.dev/callback"
+          echo "Building frontend with:"
+          echo "  VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN"
+          echo "  VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID"
+          echo "  VITE_API_URL=$VITE_API_URL"
+          echo "  VITE_REDIRECT_URI=$VITE_REDIRECT_URI"
+          npm run build
 
       - name: Sync Frontend to S3
         run: |
