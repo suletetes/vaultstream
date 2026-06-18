@@ -216,14 +216,14 @@ describe('StorageStack', () => {
   });
 
   describe('Frontend Bucket', () => {
-    it('should create frontend bucket with BlockPublicAccess', () => {
+    it('should allow public read in dev (CDN disabled) for direct S3 website hosting', () => {
       template.hasResourceProperties('AWS::S3::Bucket', {
         BucketName: Match.stringLikeRegexp('vaultstream-dev-frontend-'),
         PublicAccessBlockConfiguration: {
-          BlockPublicAcls: true,
-          BlockPublicPolicy: true,
-          IgnorePublicAcls: true,
-          RestrictPublicBuckets: true,
+          BlockPublicAcls: false,
+          BlockPublicPolicy: false,
+          IgnorePublicAcls: false,
+          RestrictPublicBuckets: false,
         },
       });
     });

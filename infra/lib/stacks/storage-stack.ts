@@ -229,11 +229,24 @@ export class StorageStack extends cdk.Stack {
     // -------------------------------------------------------------------------
     // Frontend Bucket — SPA static hosting
     // -------------------------------------------------------------------------
+    // When CDN is enabled, the bucket stays private and is served via CloudFront
+    // OAC. When CDN is disabled (e.g. dev on an unverified account), the bucket
+    // is served directly via S3 static website hosting, which requires public read.
+    const frontendPublic = !config.cdnEnabled;
+
     this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
       bucketName: `${config.prefix}-frontend-${this.account}`,
       encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      enforceSSL: true,
+      blockPublicAccess: frontendPublic
+        ? new s3.BlockPublicAccess({
+            blockPublicAcls: false,
+            blockPublicPolicy: false,
+            ignorePublicAcls: false,
+            restrictPublicBuckets: false,
+          })
+        : s3.BlockPublicAccess.BLOCK_ALL,
+      publicReadAccess: frontendPublic,
+      enforceSSL: !frontendPublic,
       versioned: false,
       removalPolicy: config.deletionProtection
         ? cdk.RemovalPolicy.RETAIN
@@ -242,6 +255,15 @@ export class StorageStack extends cdk.Stack {
       websiteIndexDocument: 'index.html',
       websiteErrorDocument: 'index.html', // SPA routing fallback
     });
+
+    // Output the S3 website URL when serving directly (CDN disabled)
+    if (frontendPublic) {
+      new cdk.CfnOutput(this, 'FrontendWebsiteUrl', {
+        value: this.frontendBucket.bucketWebsiteUrl,
+        description: 'Frontend S3 static website URL (dev, no CDN)',
+        exportName: `${config.prefix}-frontend-website-url`,
+      });
+    }
 
     // -------------------------------------------------------------------------
     // CloudFormation Outputs
