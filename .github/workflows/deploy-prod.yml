@@ -51,11 +51,11 @@ jobs:
 
       - name: CDK Diff (Review)
         working-directory: infra
-        run: npx cdk diff --all
+        run: npx cdk diff --all --context env=prod
 
       - name: CDK Deploy
         working-directory: infra
-        run: npx cdk deploy --all --require-approval never
+        run: npx cdk deploy --all --context env=prod --require-approval never
 
       - name: Build Frontend
         working-directory: packages/frontend
