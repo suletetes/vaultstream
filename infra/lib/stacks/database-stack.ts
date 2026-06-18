@@ -209,7 +209,7 @@ export class DatabaseStack extends cdk.Stack {
       securityGroupIds: [redisSecurityGroup.securityGroupId],
       transitEncryptionEnabled: true,
       atRestEncryptionEnabled: true,
-      authToken: cdk.Token.asString(redisAuthToken.secretValue),
+      authToken: redisAuthToken.secretValue.unsafeUnwrap(),
       port: 6379,
       snapshotRetentionLimit: 1,
       snapshotWindow: '05:00-06:00',
