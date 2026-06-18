@@ -33,6 +33,9 @@ export class SecurityStack extends cdk.Stack {
   /** Cognito App Client (public, PKCE) */
   public readonly appClient: cognito.UserPoolClient;
 
+  /** Cognito Hosted UI domain */
+  public readonly userPoolDomain: cognito.UserPoolDomain;
+
   /** WAF WebACL (only created if WAF is enabled) */
   public readonly webAcl?: wafv2.CfnWebACL;
 
@@ -146,6 +149,20 @@ export class SecurityStack extends cdk.Stack {
     // =========================================================================
     // Cognito App Client (public, PKCE)
     // =========================================================================
+    // Dev (no CDN) serves the SPA from the S3 website endpoint over HTTP, so we
+    // register that URL as an allowed callback/logout target in addition to the
+    // production domain and localhost.
+    const devWebsiteOrigin = `http://${config.prefix}-frontend-${this.account}.s3-website-${config.region}.amazonaws.com`;
+    const callbackUrls = [
+      'https://app.vaultstream.dev/callback',
+      'http://localhost:3000/callback',
+    ];
+    const logoutUrls = ['https://app.vaultstream.dev', 'http://localhost:3000'];
+    if (!config.cdnEnabled) {
+      callbackUrls.push(`${devWebsiteOrigin}/callback`);
+      logoutUrls.push(devWebsiteOrigin);
+    }
+
     this.appClient = this.userPool.addClient('AppClient', {
       userPoolClientName: `${config.prefix}-app-client`,
       generateSecret: false, // Public client — no secret
@@ -161,14 +178,8 @@ export class SecurityStack extends cdk.Stack {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.PROFILE,
         ],
-        callbackUrls: [
-          'https://app.vaultstream.dev/callback',
-          'http://localhost:3000/callback',
-        ],
-        logoutUrls: [
-          'https://app.vaultstream.dev',
-          'http://localhost:3000',
-        ],
+        callbackUrls,
+        logoutUrls,
       },
       accessTokenValidity: cdk.Duration.hours(1),
       idTokenValidity: cdk.Duration.hours(1),
@@ -177,6 +188,16 @@ export class SecurityStack extends cdk.Stack {
       supportedIdentityProviders: [
         cognito.UserPoolClientIdentityProvider.COGNITO,
       ],
+    });
+
+    // =========================================================================
+    // Cognito Hosted UI Domain — required for the OAuth2 / PKCE flow
+    // (https://<prefix>-<account>.auth.<region>.amazoncognito.com)
+    // =========================================================================
+    this.userPoolDomain = this.userPool.addDomain('HostedUiDomain', {
+      cognitoDomain: {
+        domainPrefix: `${config.prefix}-${this.account}`,
+      },
     });
 
     // =========================================================================
@@ -306,6 +327,12 @@ export class SecurityStack extends cdk.Stack {
       value: this.appClient.userPoolClientId,
       description: 'Cognito App Client ID',
       exportName: `${config.prefix}-app-client-id`,
+    });
+
+    new cdk.CfnOutput(this, 'CognitoDomain', {
+      value: `https://${config.prefix}-${this.account}.auth.${config.region}.amazoncognito.com`,
+      description: 'Cognito Hosted UI domain (OAuth2 base URL)',
+      exportName: `${config.prefix}-cognito-domain`,
     });
 
     if (this.webAcl) {
