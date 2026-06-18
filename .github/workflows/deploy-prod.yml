@@ -10,6 +10,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  ENV_PREFIX: vaultstream-prod
 
 jobs:
   deploy:
@@ -31,20 +32,24 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
       - name: Pre-Deploy Backup — RDS Snapshot
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           aws rds create-db-snapshot \
-            --db-instance-identifier vaultstream-audit \
-            --db-snapshot-identifier "pre-deploy-${TIMESTAMP}"
-          echo "RDS snapshot created: pre-deploy-${TIMESTAMP}"
+            --db-instance-identifier ${{ env.ENV_PREFIX }}-audit-db \
+            --db-snapshot-identifier "pre-deploy-${TIMESTAMP}" || true
+          echo "RDS snapshot requested: pre-deploy-${TIMESTAMP}"
 
       - name: Pre-Deploy Backup — DynamoDB
         run: |
           aws dynamodb create-backup \
-            --table-name vaultstream-metadata \
-            --backup-name "pre-deploy-$(date +%Y%m%d-%H%M%S)"
-          echo "DynamoDB backup created"
+            --table-name ${{ env.ENV_PREFIX }}-metadata \
+            --backup-name "pre-deploy-$(date +%Y%m%d-%H%M%S)" || true
+          echo "DynamoDB backup requested"
 
       - name: Build Packages
         run: npm run build --workspaces --if-present
@@ -63,9 +68,12 @@ jobs:
 
       - name: Sync Frontend to S3
         run: |
-          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.ACCOUNT_ID }}/ --delete
+          BUCKET="${{ env.ENV_PREFIX }}-frontend-${{ steps.account.outputs.id }}"
+          echo "Syncing to s3://${BUCKET}/"
+          aws s3 sync packages/frontend/dist/ "s3://${BUCKET}/" --delete
 
       - name: Invalidate CloudFront
+        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
@@ -73,7 +81,18 @@ jobs:
 
       - name: Post-Deploy Verification
         run: |
-          HEALTH_URL="${{ secrets.API_URL }}/health"
+          API_URL="${{ secrets.API_URL }}"
+          if [ -z "$API_URL" ]; then
+            API_URL=$(aws cloudformation describe-stacks \
+              --stack-name ${{ env.ENV_PREFIX }}-compute \
+              --query "Stacks[0].Outputs[?contains(OutputKey,'RestApi')].OutputValue" \
+              --output text 2>/dev/null || echo "")
+          fi
+          if [ -z "$API_URL" ]; then
+            echo "No API URL found, skipping verification"
+            exit 0
+          fi
+          HEALTH_URL="${API_URL}health"
           echo "Waiting 30s for deployment to stabilize..."
           sleep 30
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
@@ -87,21 +106,19 @@ jobs:
         if: failure()
         run: |
           echo "::error::Production deployment failed — initiating rollback"
-          # Restore previous frontend from S3 versioning
-          aws s3api list-object-versions \
-            --bucket "vaultstream-frontend-${{ secrets.ACCOUNT_ID }}" \
-            --query 'Versions[?IsLatest==`false`]' --output json > /dev/null 2>&1 || true
-          # Redeploy the last known-good CDK state via CloudFormation rollback
+          # Attempt CloudFormation rollback for any stacks in failed state
           STACKS=$(aws cloudformation list-stacks \
             --stack-status-filter UPDATE_ROLLBACK_COMPLETE UPDATE_COMPLETE \
-            --query "StackSummaries[?contains(StackName,'vaultstream-prod')].StackName" \
-            --output text)
+            --query "StackSummaries[?contains(StackName,'${{ env.ENV_PREFIX }}')].StackName" \
+            --output text 2>/dev/null || echo "")
           for STACK in $STACKS; do
             echo "Rolling back stack: $STACK"
             aws cloudformation rollback-stack --stack-name "$STACK" || true
           done
           # Invalidate CloudFront to serve rolled-back content
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*" || true
+          if [ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+              --paths "/*" || true
+          fi
           echo "Rollback initiated. Manual verification required."

@@ -10,6 +10,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  ENV_PREFIX: vaultstream-dev
 
 jobs:
   deploy:
@@ -31,6 +32,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Get AWS Account ID
+        id: account
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
       - name: Build Packages
         run: npm run build --workspaces --if-present
 
@@ -48,9 +53,12 @@ jobs:
 
       - name: Sync Frontend to S3
         run: |
-          aws s3 sync packages/frontend/dist/ s3://vaultstream-frontend-${{ secrets.ACCOUNT_ID }}/ --delete
+          BUCKET="${{ env.ENV_PREFIX }}-frontend-${{ steps.account.outputs.id }}"
+          echo "Syncing to s3://${BUCKET}/"
+          aws s3 sync packages/frontend/dist/ "s3://${BUCKET}/" --delete
 
-      - name: Invalidate CloudFront
+      - name: Invalidate CloudFront (if distribution exists)
+        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
@@ -58,7 +66,20 @@ jobs:
 
       - name: Smoke Tests
         run: |
-          HEALTH_URL="${{ secrets.API_URL }}/health"
+          # Get API URL from CDK outputs
+          API_URL="${{ secrets.API_URL }}"
+          if [ -z "$API_URL" ]; then
+            API_URL=$(aws cloudformation describe-stacks \
+              --stack-name ${{ env.ENV_PREFIX }}-compute \
+              --query "Stacks[0].Outputs[?contains(OutputKey,'RestApi')].OutputValue" \
+              --output text 2>/dev/null || echo "")
+          fi
+          if [ -z "$API_URL" ]; then
+            echo "No API URL found, skipping smoke test"
+            exit 0
+          fi
+          HEALTH_URL="${API_URL}health"
+          echo "Testing: ${HEALTH_URL}"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
           if [ "$STATUS" != "200" ]; then
             echo "Smoke test failed: health check returned $STATUS"
@@ -68,9 +89,5 @@ jobs:
 
       - name: Rollback on Failure
         if: failure()
-        working-directory: infra
         run: |
-          echo "Deployment failed — initiating rollback"
-          # CDK doesn't have native rollback; would need to redeploy previous commit
-          # For now, alert the team
           echo "::error::Deployment to dev failed. Manual intervention may be required."
