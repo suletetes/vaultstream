@@ -6,14 +6,15 @@
  * - Indexes on user_id, file_id, event_type, created_at
  * - REVOKE DELETE to ensure immutability
  *
- * Designed for Knex.js migration runner.
+ * Runs against the primary RDS pool via node-postgres (`pg`), consistent with
+ * the rest of the data layer (see db/pg-client.ts).
  */
 
-import type { Knex } from 'knex';
+import type { PoolClient } from 'pg';
 
-export async function up(knex: Knex): Promise<void> {
+export async function up(client: PoolClient): Promise<void> {
   // Create the audit_events table with range partitioning by created_at
-  await knex.raw(`
+  await client.query(`
     CREATE TABLE IF NOT EXISTS audit_events (
       id UUID DEFAULT gen_random_uuid(),
       event_type VARCHAR(100) NOT NULL,
@@ -35,33 +36,33 @@ export async function up(knex: Knex): Promise<void> {
   `);
 
   // Create indexes for common query patterns
-  await knex.raw(`
+  await client.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_events_user_id
       ON audit_events (user_id, created_at DESC);
   `);
 
-  await knex.raw(`
+  await client.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_events_file_id
       ON audit_events (file_id, created_at DESC);
   `);
 
-  await knex.raw(`
+  await client.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_events_event_type
       ON audit_events (event_type, created_at DESC);
   `);
 
-  await knex.raw(`
+  await client.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_events_created_at
       ON audit_events (created_at DESC);
   `);
 
-  await knex.raw(`
+  await client.query(`
     CREATE INDEX IF NOT EXISTS idx_audit_events_severity
       ON audit_events (severity, created_at DESC);
   `);
 
   // REVOKE DELETE to ensure audit log immutability
-  await knex.raw(`
+  await client.query(`
     REVOKE DELETE ON audit_events FROM PUBLIC;
   `);
 
@@ -73,13 +74,13 @@ export async function up(knex: Knex): Promise<void> {
     ? `${year + 1}-01`
     : `${year}-${String(now.getMonth() + 2).padStart(2, '0')}`;
 
-  await knex.raw(`
+  await client.query(`
     CREATE TABLE IF NOT EXISTS audit_events_${year}_${month}
       PARTITION OF audit_events
       FOR VALUES FROM ('${year}-${month}-01') TO ('${nextMonth}-01');
   `);
 }
 
-export async function down(knex: Knex): Promise<void> {
-  await knex.raw('DROP TABLE IF EXISTS audit_events CASCADE;');
+export async function down(client: PoolClient): Promise<void> {
+  await client.query('DROP TABLE IF EXISTS audit_events CASCADE;');
 }
