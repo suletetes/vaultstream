@@ -6,8 +6,8 @@
  * extraction with proper typing.
  */
 
-import { Request } from 'express';
 import { AppError, ErrorCode } from '@vaultstream/shared';
+import { Request } from 'express';
 
 /**
  * Extract a required route parameter. Throws 400 if missing.

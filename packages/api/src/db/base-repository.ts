@@ -14,6 +14,7 @@ import {
   BatchWriteCommand,
   type QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
+
 import { docClient, TABLE_NAME } from './dynamodb';
 
 export interface QueryParams {
