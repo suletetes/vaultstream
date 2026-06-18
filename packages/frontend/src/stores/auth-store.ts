@@ -136,12 +136,16 @@ export async function handleCallback(code: string): Promise<void> {
     expiresAt: Math.floor(Date.now() / 1000) + data.expires_in,
   };
 
+  const email = decoded.email ?? '';
   const user: AuthUser = {
-    userId: decoded.sub,
-    email: decoded.email,
-    displayName: decoded.name || decoded.email,
-    role: decoded['custom:role'] || 'user',
-    tier: decoded['custom:tier'] || 'free',
+    userId: decoded.sub ?? '',
+    email,
+    displayName: decoded.name || email,
+    role: decoded['custom:role'] === 'admin' ? 'admin' : 'user',
+    tier:
+      decoded['custom:tier'] === 'pro' || decoded['custom:tier'] === 'enterprise'
+        ? decoded['custom:tier']
+        : 'free',
   };
 
   setAuth(authTokens, user);
@@ -202,8 +206,11 @@ function scheduleRefresh(): void {
   }
 }
 
-function parseJwt(token: string): Record<string, string> {
+function parseJwt(token: string): Record<string, string | undefined> {
   const base64Url = token.split('.')[1];
+  if (!base64Url) {
+    throw new Error('Invalid JWT: missing payload segment');
+  }
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
   const jsonPayload = decodeURIComponent(
     atob(base64)
